@@ -1,0 +1,140 @@
+CREATE OR REPLACE PACKAGE PKG_ALUNO AS
+    PROCEDURE ExcluirAluno(p_id_aluno NUMBER);
+    PROCEDURE ListarAlunos18Anos;
+    PROCEDURE ListarAlunosPorCurso(p_id_curso NUMBER);
+END PKG_ALUNO;
+/
+
+CREATE OR REPLACE PACKAGE BODY PKG_ALUNO AS
+    PROCEDURE ExcluirAluno(p_id_aluno NUMBER) IS
+    BEGIN
+        DELETE FROM Matriculas WHERE id_aluno = p_id_aluno;
+        DELETE FROM Alunos WHERE id_aluno = p_id_aluno;
+        COMMIT;
+    END;
+
+    PROCEDURE ListarAlunos18Anos IS
+        CURSOR c_alunos IS
+            SELECT nome, data_nascimento
+            FROM Alunos
+            WHERE TRUNC(MONTHS_BETWEEN(SYSDATE, data_nascimento) / 12) > 18;
+    BEGIN
+        FOR aluno IN c_alunos LOOP
+            DBMS_OUTPUT.PUT_LINE('Nome: ' || aluno.nome || ' | Data de Nascimento: ' || aluno.data_nascimento);
+        END LOOP;
+    END;
+
+    PROCEDURE ListarAlunosPorCurso(p_id_curso NUMBER) IS
+        CURSOR c_curso IS
+            SELECT nome
+            FROM Alunos
+            WHERE id_curso = p_id_curso;
+    BEGIN
+        FOR aluno IN c_curso LOOP
+            DBMS_OUTPUT.PUT_LINE('Nome: ' || aluno.nome);
+        END LOOP;
+    END;
+END PKG_ALUNO;
+/
+
+CREATE OR REPLACE PACKAGE PKG_DISCIPLINA AS
+    PROCEDURE CadastrarDisciplina(p_nome VARCHAR2, p_descricao VARCHAR2, p_carga_horaria NUMBER);
+    PROCEDURE TotalAlunosPorDisciplina;
+    PROCEDURE MediaIdadePorDisciplina(p_id_disciplina NUMBER);
+    PROCEDURE ListarAlunosDisciplina(p_id_disciplina NUMBER);
+END PKG_DISCIPLINA;
+/
+
+CREATE OR REPLACE PACKAGE BODY PKG_DISCIPLINA AS
+    PROCEDURE CadastrarDisciplina(p_nome VARCHAR2, p_descricao VARCHAR2, p_carga_horaria NUMBER) IS
+    BEGIN
+        INSERT INTO Disciplinas (id_disciplina, nome, descricao, carga_horaria)
+        VALUES (seq_disciplina.NEXTVAL, p_nome, p_descricao, p_carga_horaria);
+        COMMIT;
+    END;
+
+    PROCEDURE TotalAlunosPorDisciplina IS
+        CURSOR c_total IS
+            SELECT d.nome AS disciplina, COUNT(m.id_aluno) AS total_alunos
+            FROM Disciplinas d
+            JOIN Turmas t ON t.id_disciplina = d.id_disciplina
+            JOIN Matriculas m ON m.id_turma = t.id_turma
+            GROUP BY d.nome
+            HAVING COUNT(m.id_aluno) > 10;
+    BEGIN
+        FOR item IN c_total LOOP
+            DBMS_OUTPUT.PUT_LINE('Disciplina: ' || item.disciplina || ' | Total Alunos: ' || item.total_alunos);
+        END LOOP;
+    END;
+
+    PROCEDURE MediaIdadePorDisciplina(p_id_disciplina NUMBER) IS
+        CURSOR c_media IS
+            SELECT AVG(TRUNC(MONTHS_BETWEEN(SYSDATE, a.data_nascimento) / 12)) AS media_idade
+            FROM Alunos a
+            JOIN Matriculas m ON m.id_aluno = a.id_aluno
+            JOIN Turmas t ON t.id_turma = m.id_turma
+            WHERE t.id_disciplina = p_id_disciplina;
+    BEGIN
+        FOR resultado IN c_media LOOP
+            DBMS_OUTPUT.PUT_LINE('Média de Idade: ' || resultado.media_idade);
+        END LOOP;
+    END;
+
+    PROCEDURE ListarAlunosDisciplina(p_id_disciplina NUMBER) IS
+        CURSOR c_alunos IS
+            SELECT a.nome
+            FROM Alunos a
+            JOIN Matriculas m ON m.id_aluno = a.id_aluno
+            JOIN Turmas t ON t.id_turma = m.id_turma
+            WHERE t.id_disciplina = p_id_disciplina;
+    BEGIN
+        FOR aluno IN c_alunos LOOP
+            DBMS_OUTPUT.PUT_LINE('Aluno: ' || aluno.nome);
+        END LOOP;
+    END;
+END PKG_DISCIPLINA;
+/
+
+CREATE OR REPLACE PACKAGE PKG_PROFESSOR AS
+    FUNCTION TotalTurmasProfessor(p_id_professor NUMBER) RETURN NUMBER;
+    FUNCTION ProfessorDisciplina(p_id_disciplina NUMBER) RETURN VARCHAR2;
+    PROCEDURE TotalTurmasPorProfessor;
+END PKG_PROFESSOR;
+/
+
+CREATE OR REPLACE PACKAGE BODY PKG_PROFESSOR AS
+    FUNCTION TotalTurmasProfessor(p_id_professor NUMBER) RETURN NUMBER IS
+        v_total NUMBER;
+    BEGIN
+        SELECT COUNT(*)
+        INTO v_total
+        FROM Turmas
+        WHERE id_professor = p_id_professor;
+        RETURN v_total;
+    END;
+
+    FUNCTION ProfessorDisciplina(p_id_disciplina NUMBER) RETURN VARCHAR2 IS
+        v_nome_professor VARCHAR2(100);
+    BEGIN
+        SELECT p.nome
+        INTO v_nome_professor
+        FROM Professores p
+        JOIN Turmas t ON t.id_professor = p.id_professor
+        WHERE t.id_disciplina = p_id_disciplina;
+        RETURN v_nome_professor;
+    END;
+
+    PROCEDURE TotalTurmasPorProfessor IS
+        CURSOR c_turmas IS
+            SELECT p.nome AS professor, COUNT(t.id_turma) AS total_turmas
+            FROM Professores p
+            JOIN Turmas t ON t.id_professor = p.id_professor
+            GROUP BY p.nome
+            HAVING COUNT(t.id_turma) > 1;
+    BEGIN
+        FOR professor IN c_turmas LOOP
+            DBMS_OUTPUT.PUT_LINE('Professor: ' || professor.professor || ' | Total de Turmas: ' || professor.total_turmas);
+        END LOOP;
+    END;
+END PKG_PROFESSOR;
+/
