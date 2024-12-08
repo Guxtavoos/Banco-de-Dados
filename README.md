@@ -1,8 +1,6 @@
-# Banco-de-Dados
+
 
 # Pacotes PL/SQL para Gestão Acadêmica
-
-Este projeto contém pacotes PL/SQL implementados no Oracle para operações relacionadas às entidades `Aluno`, `Disciplina` e `Professor`.
 
 ## Estrutura dos Pacotes
 
