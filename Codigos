@@ -1,11 +1,54 @@
+CREATE TABLE Alunos (
+    id_aluno NUMBER PRIMARY KEY,
+    nome VARCHAR2(100),
+    data_nascimento DATE,
+    id_curso NUMBER
+);
+
+CREATE TABLE Disciplinas (
+    id_disciplina NUMBER PRIMARY KEY,
+    nome VARCHAR2(100),
+    descricao VARCHAR2(255),
+    carga_horaria NUMBER
+);
+
+CREATE TABLE Professores (
+    id_professor NUMBER PRIMARY KEY,
+    nome VARCHAR2(100)
+);
+
+CREATE TABLE Turmas (
+    id_turma NUMBER PRIMARY KEY,
+    id_disciplina NUMBER,
+    id_professor NUMBER,
+    FOREIGN KEY (id_disciplina) REFERENCES Disciplinas(id_disciplina),
+    FOREIGN KEY (id_professor) REFERENCES Professores(id_professor)
+);
+
+CREATE TABLE Matriculas (
+    id_matricula NUMBER PRIMARY KEY,
+    id_aluno NUMBER,
+    id_turma NUMBER,
+    FOREIGN KEY (id_aluno) REFERENCES Alunos(id_aluno),
+    FOREIGN KEY (id_turma) REFERENCES Turmas(id_turma)
+);
+
+
+-- =======================================
+-- PACOTE: PKG_ALUNO
+-- =======================================
+
 CREATE OR REPLACE PACKAGE PKG_ALUNO AS
+    -- Procedimentos
     PROCEDURE ExcluirAluno(p_id_aluno NUMBER);
     PROCEDURE ListarAlunos18Anos;
     PROCEDURE ListarAlunosPorCurso(p_id_curso NUMBER);
 END PKG_ALUNO;
 /
 
+
 CREATE OR REPLACE PACKAGE BODY PKG_ALUNO AS
+    -- Procedimento: ExcluirAluno
     PROCEDURE ExcluirAluno(p_id_aluno NUMBER) IS
     BEGIN
         DELETE FROM Matriculas WHERE id_aluno = p_id_aluno;
@@ -13,6 +56,7 @@ CREATE OR REPLACE PACKAGE BODY PKG_ALUNO AS
         COMMIT;
     END;
 
+    -- Procedimento: ListarAlunos18Anos
     PROCEDURE ListarAlunos18Anos IS
         CURSOR c_alunos IS
             SELECT nome, data_nascimento
@@ -24,6 +68,7 @@ CREATE OR REPLACE PACKAGE BODY PKG_ALUNO AS
         END LOOP;
     END;
 
+    -- Procedimento: ListarAlunosPorCurso
     PROCEDURE ListarAlunosPorCurso(p_id_curso NUMBER) IS
         CURSOR c_curso IS
             SELECT nome
@@ -37,7 +82,13 @@ CREATE OR REPLACE PACKAGE BODY PKG_ALUNO AS
 END PKG_ALUNO;
 /
 
+
+-- =======================================
+-- PACOTE: PKG_DISCIPLINA
+-- =======================================
+
 CREATE OR REPLACE PACKAGE PKG_DISCIPLINA AS
+    -- Procedimentos
     PROCEDURE CadastrarDisciplina(p_nome VARCHAR2, p_descricao VARCHAR2, p_carga_horaria NUMBER);
     PROCEDURE TotalAlunosPorDisciplina;
     PROCEDURE MediaIdadePorDisciplina(p_id_disciplina NUMBER);
@@ -45,7 +96,9 @@ CREATE OR REPLACE PACKAGE PKG_DISCIPLINA AS
 END PKG_DISCIPLINA;
 /
 
+
 CREATE OR REPLACE PACKAGE BODY PKG_DISCIPLINA AS
+    -- Procedimento: CadastrarDisciplina
     PROCEDURE CadastrarDisciplina(p_nome VARCHAR2, p_descricao VARCHAR2, p_carga_horaria NUMBER) IS
     BEGIN
         INSERT INTO Disciplinas (id_disciplina, nome, descricao, carga_horaria)
@@ -53,6 +106,7 @@ CREATE OR REPLACE PACKAGE BODY PKG_DISCIPLINA AS
         COMMIT;
     END;
 
+    -- Procedimento: TotalAlunosPorDisciplina
     PROCEDURE TotalAlunosPorDisciplina IS
         CURSOR c_total IS
             SELECT d.nome AS disciplina, COUNT(m.id_aluno) AS total_alunos
@@ -67,6 +121,7 @@ CREATE OR REPLACE PACKAGE BODY PKG_DISCIPLINA AS
         END LOOP;
     END;
 
+    -- Procedimento: MediaIdadePorDisciplina
     PROCEDURE MediaIdadePorDisciplina(p_id_disciplina NUMBER) IS
         CURSOR c_media IS
             SELECT AVG(TRUNC(MONTHS_BETWEEN(SYSDATE, a.data_nascimento) / 12)) AS media_idade
@@ -80,6 +135,7 @@ CREATE OR REPLACE PACKAGE BODY PKG_DISCIPLINA AS
         END LOOP;
     END;
 
+    -- Procedimento: ListarAlunosDisciplina
     PROCEDURE ListarAlunosDisciplina(p_id_disciplina NUMBER) IS
         CURSOR c_alunos IS
             SELECT a.nome
@@ -95,14 +151,24 @@ CREATE OR REPLACE PACKAGE BODY PKG_DISCIPLINA AS
 END PKG_DISCIPLINA;
 /
 
+
+-- =======================================
+-- PACOTE: PKG_PROFESSOR
+-- =======================================
+
 CREATE OR REPLACE PACKAGE PKG_PROFESSOR AS
+    -- Funções
     FUNCTION TotalTurmasProfessor(p_id_professor NUMBER) RETURN NUMBER;
     FUNCTION ProfessorDisciplina(p_id_disciplina NUMBER) RETURN VARCHAR2;
+
+    -- Procedimento
     PROCEDURE TotalTurmasPorProfessor;
 END PKG_PROFESSOR;
 /
 
+
 CREATE OR REPLACE PACKAGE BODY PKG_PROFESSOR AS
+    -- Função: TotalTurmasProfessor
     FUNCTION TotalTurmasProfessor(p_id_professor NUMBER) RETURN NUMBER IS
         v_total NUMBER;
     BEGIN
@@ -113,6 +179,7 @@ CREATE OR REPLACE PACKAGE BODY PKG_PROFESSOR AS
         RETURN v_total;
     END;
 
+    -- Função: ProfessorDisciplina
     FUNCTION ProfessorDisciplina(p_id_disciplina NUMBER) RETURN VARCHAR2 IS
         v_nome_professor VARCHAR2(100);
     BEGIN
@@ -124,6 +191,7 @@ CREATE OR REPLACE PACKAGE BODY PKG_PROFESSOR AS
         RETURN v_nome_professor;
     END;
 
+    -- Procedimento: TotalTurmasPorProfessor
     PROCEDURE TotalTurmasPorProfessor IS
         CURSOR c_turmas IS
             SELECT p.nome AS professor, COUNT(t.id_turma) AS total_turmas
@@ -138,3 +206,4 @@ CREATE OR REPLACE PACKAGE BODY PKG_PROFESSOR AS
     END;
 END PKG_PROFESSOR;
 /
+
